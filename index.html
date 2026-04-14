@@ -186,6 +186,52 @@
   </div>
 </div>
 
+<!-- SECTION 2B：回訪顧客更新寵物狀況 -->
+<div class="section" id="section-2b" style="display:none">
+  <div class="section-title"><span>🔄</span> 更新寵物狀況</div>
+  <div class="card">
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+      以下資料每次看診前建議更新，其他資料保持原檔不變。
+    </p>
+    <div style="display:flex;gap:12px">
+      <div class="field" style="flex:1">
+        <label>目前體重（kg）</label>
+        <input type="number" id="updateWeight" placeholder="5" step="0.1">
+      </div>
+      <div class="field" style="flex:1">
+        <label>目前體長（cm）</label>
+        <input type="number" id="updateLength" placeholder="40">
+      </div>
+    </div>
+    <div class="field">
+      <label>最近膚況</label>
+      <div class="check-group">
+        <label><input type="checkbox" name="updateSkin" value="正常"> 正常</label>
+        <label><input type="checkbox" name="updateSkin" value="搔癢"> 搔癢</label>
+        <label><input type="checkbox" name="updateSkin" value="乾燥"> 乾燥</label>
+        <label><input type="checkbox" name="updateSkin" value="紅疹"> 紅疹</label>
+        <label><input type="checkbox" name="updateSkin" value="皮屑"> 皮屑</label>
+        <label><input type="checkbox" name="updateSkin" value="黃垢"> 黃垢</label>
+        <label><input type="checkbox" name="updateSkin" value="禿毛"> 禿毛</label>
+        <label><input type="checkbox" name="updateSkin" value="黴菌"> 黴菌</label>
+        <label><input type="checkbox" name="updateSkin" value="其他"> 其他</label>
+      </div>
+    </div>
+    <div class="field">
+      <label>最近健康狀況</label>
+      <div class="check-group">
+        <label><input type="checkbox" name="updateHealth" value="正常"> 正常</label>
+        <label><input type="checkbox" name="updateHealth" value="軟便"> 軟便</label>
+        <label><input type="checkbox" name="updateHealth" value="精神不振"> 精神不振</label>
+        <label><input type="checkbox" name="updateHealth" value="食慾不佳"> 食慾不佳</label>
+        <label><input type="checkbox" name="updateHealth" value="嘔吐"> 嘔吐</label>
+        <label><input type="checkbox" name="updateHealth" value="外傷"> 外傷</label>
+        <label><input type="checkbox" name="updateHealth" value="就診"> 就診</label>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- SECTION 3 -->
 <div class="section" id="section-3">
   <div class="section-title"><span>✂️</span> 預約項目</div>
@@ -335,6 +381,7 @@ function updateProgress() {
 }
 
 function goToSection(n) {
+  const current = typeof currentStep === 'string' ? `section-${currentStep}` : `section-${currentStep}`;
   document.getElementById(`section-${currentStep}`).classList.remove('active');
   currentStep = n;
   document.getElementById(`section-${currentStep}`).classList.add('active');
@@ -353,10 +400,30 @@ function validate() {
   return true;
 }
 
-function nextStep() {
+async function nextStep() {
   if (!validate()) return;
-  if (currentStep === 1 && isReturning && skipPetForm) { goToSection(3); return; }
+  // if (currentStep === 1 && isReturning && skipPetForm) { goToSection(3); return; }
+  if (currentStep === 1 && isReturning && skipPetForm) {
+    document.getElementById('section-2b').style.display = 'block';
+    goToSection('2b');
+    return;
+  }
   // if (currentStep === 3) buildSummary();
+  // if (currentStep === 3) {
+  // if (currentStep === 3 || currentStep === '2b') {
+  //   const blocked = await checkDuplicate();
+  //   if (blocked) return;
+  //   buildSummary();
+  // }
+  // if (currentStep < 4) goToSection(currentStep + 1);
+  // else submitForm();
+  if (currentStep === '2b') {
+    const blocked = await checkDuplicate();
+    if (blocked) return;
+    buildSummary();
+    goToSection(4);
+    return;
+  }
   if (currentStep === 3) {
     const blocked = await checkDuplicate();
     if (blocked) return;
@@ -367,7 +434,9 @@ function nextStep() {
 }
 
 function prevStep() {
-  if (currentStep === 3 && isReturning && skipPetForm) { goToSection(1); return; }
+  // if (currentStep === 3 && isReturning && skipPetForm) { goToSection(1); return; }
+  if (currentStep === '2b') { goToSection(1); return; }
+  if (currentStep === 3 && isReturning && skipPetForm) { goToSection('2b'); return; }
   if (currentStep > 1) goToSection(currentStep - 1);
 }
 
@@ -415,6 +484,23 @@ async function submitForm() {
   let action = isNew ? 'register' : isAddingPet ? 'addPet' : 'booking';
   const payload = { action, userId: userLineId, ownerName, phone, breed, ...(isNew ? { address: document.getElementById('address').value, idNumber: document.getElementById('idNumber').value, isSelf: getRadio('isSelf'), secondContact: document.getElementById('secondContact').value } : {}), ...petPayload, petId: skipPetForm ? selectedPetId : '', petName: skipPetForm ? selectedPetName : document.getElementById('petName').value, groomingService: getRadio('groomingService'), additionalService: getChecked('additionalService'), boarding: document.getElementById('boardingDate').value, appointmentDate: document.getElementById('appointmentDate').value, agreeGrooming: document.getElementById('agreeGrooming').checked ? '同意' : '未同意', agreeBoarding: document.getElementById('agreeBoarding').checked ? '同意' : '未同意' };
 
+  if (skipPetForm) {
+    const updatePayload = {
+      action: 'updatePet',
+      petId: selectedPetId,
+      weight: document.getElementById('updateWeight').value,
+      length: document.getElementById('updateLength').value,
+      skinCondition: getChecked('updateSkin'),
+      healthCondition: getChecked('updateHealth'),
+    };
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatePayload)
+    });
+  }
+  
   try {
     if (action === 'register' || action === 'addPet') {
       await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
