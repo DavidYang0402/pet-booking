@@ -356,7 +356,12 @@ function validate() {
 function nextStep() {
   if (!validate()) return;
   if (currentStep === 1 && isReturning && skipPetForm) { goToSection(3); return; }
-  if (currentStep === 3) buildSummary();
+  // if (currentStep === 3) buildSummary();
+  if (currentStep === 3) {
+    const blocked = await checkDuplicate();
+    if (blocked) return;
+    buildSummary();
+  }
   if (currentStep < 4) goToSection(currentStep + 1);
   else submitForm();
 }
@@ -366,6 +371,26 @@ function prevStep() {
   if (currentStep > 1) goToSection(currentStep - 1);
 }
 
+async function checkDuplicate() {
+  const petId = skipPetForm ? selectedPetId : '';
+  const date = document.getElementById('appointmentDate').value;
+
+  // 新寵物不需要檢查
+  if (!petId || !date) return false;
+
+  try {
+    const res = await fetch(`${GAS_URL}?petId=${petId}&date=${date}`);
+    const data = await res.json();
+    if (data.duplicate) {
+      alert(`${selectedPetName} 在 ${date} 已有預約紀錄，請選擇其他日期。`);
+      return true;
+    }
+  } catch(e) {
+    console.log('check duplicate error:', e);
+  }
+  return false;
+}
+  
 function buildSummary() {
   const name = isReturning ? ownerData.name : document.getElementById('ownerName').value;
   const phone = isReturning ? ownerData.phone : document.getElementById('phone').value;
