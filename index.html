@@ -262,6 +262,13 @@ async function initLiff() {
     userLineId = profile.userId;
     await checkExistingUser();
   } catch(e) { console.log(e); hideLoading(); }
+
+  // 限制日期只能選今天之後
+  const today = new Date();
+  today.setDate(today.getDate() + 1);
+  const minDate = today.toISOString().split('T')[0];
+  document.getElementById('appointmentDate').min = minDate;
+  document.getElementById('boardingDate').min = minDate;
 }
 
 async function checkExistingUser() {
