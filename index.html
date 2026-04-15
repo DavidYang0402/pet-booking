@@ -954,27 +954,23 @@
             }
             if (currentStep === 2) { if (!document.getElementById('petName').value.trim()) { alert('請填寫寵物名'); return false; } if (!document.getElementById('breed').value.trim()) { alert('請填寫品種'); return false; } }
             if (currentStep === 3) {
-                const dateVal = document.getElementById('appointmentDate').value;
-                if (!dateVal) { alert('請選擇預約日期'); return false; }
-              
-                const selected = new Date(dateVal);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                if (selected < today) { 
-                    alert('預約日期不能選擇過去的日期，請重新選擇。'); 
-                    document.getElementById('appointmentDate').value = '';
-                    return false; 
-                }
-                // 住宿日期
-                const boardingVal = document.getElementById('boardingDate').value;
-                if (boardingVal) {
-                    const boardingDate = new Date(boardingVal);
-                    if (boardingDate < today) {
-                      alert('住宿日期不能選擇過去的日期，請重新選擇。');
-                      document.getElementById('boardingDate').value = '';
-                      return false;
-                    }
-                }
+              const dateVal = document.getElementById('appointmentDate').value;
+              if (!dateVal) { alert('請選擇預約日期'); return false; }
+            
+              const today = new Date();
+              const todayStr = today.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+              if (dateVal < todayStr) {
+                alert('預約日期不能選擇過去的日期，請重新選擇。');
+                document.getElementById('appointmentDate').value = '';
+                return false;
+              }
+            
+              const boardingVal = document.getElementById('boardingDate').value;
+              if (boardingVal && boardingVal < todayStr) {
+                alert('住宿日期不能選擇過去的日期，請重新選擇。');
+                document.getElementById('boardingDate').value = '';
+                return false;
+              }
             }
             if (currentStep === 4) { if (!document.getElementById('agreeGrooming').checked) { alert('請同意美容定型化契約'); return false; } }
             return true;
@@ -1068,11 +1064,12 @@
             }
 
             try {
-                if (action === 'register' || action === 'addPet') {
-                    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    payload.action = 'booking';
-                }
-                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                 await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 hideLoading();
                 showSuccess();
             } catch (err) { hideLoading(); alert('送出失敗，請稍後再試。'); }
